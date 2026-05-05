@@ -306,3 +306,27 @@ function OddBox({ match_id, match_label, market, selection, value }: { match_id:
     </button>
   );
 }
+
+function Leaderboard({ title, icon, rows }: { title: string; icon: React.ReactNode; rows: Array<{ id: string; rank: number; name: string; sub: string; score: number }> }) {
+  return (
+    <div className="glass-strong rounded-2xl p-4">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">{icon} {title}</h3>
+      {rows.length === 0 ? (
+        <p className="py-4 text-center text-xs text-muted-foreground">No rankings yet.</p>
+      ) : (
+        <ol className="space-y-1.5">
+          {rows.map((r) => (
+            <li key={r.id} className="flex items-center gap-3 rounded-lg glass px-3 py-2">
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${r.rank === 1 ? "bg-gold-gradient text-accent-foreground" : r.rank <= 3 ? "bg-accent/20 text-accent" : "bg-white/5 text-muted-foreground"}`}>{r.rank}</span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-bold">{r.name}</div>
+                <div className="truncate text-xs text-muted-foreground">{r.sub}</div>
+              </div>
+              <div className="font-mono text-sm font-bold tabular-nums text-gold">{Number(r.score).toLocaleString()}</div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
