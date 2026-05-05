@@ -30,12 +30,12 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SHOOTERS BET — Luxury Sports Betting with Virtual Tokens" },
-      { name: "description", content: "Place bets, cashout, and chase wins on SHOOTERS BET — the luxury virtual-token sports betting platform." },
-      { property: "og:title", content: "SHOOTERS BET — Luxury Sports Betting with Virtual Tokens" },
-      { name: "twitter:title", content: "SHOOTERS BET — Luxury Sports Betting with Virtual Tokens" },
-      { property: "og:description", content: "Place bets, cashout, and chase wins on SHOOTERS BET — the luxury virtual-token sports betting platform." },
-      { name: "twitter:description", content: "Place bets, cashout, and chase wins on SHOOTERS BET — the luxury virtual-token sports betting platform." },
+      { title: "LOMITA SHOOTERS LEAGUE — Luxury Sports Betting with Virtual Tokens" },
+      { name: "description", content: "LOMITA SHOOTERS LEAGUE — the luxury virtual-token gang & faction sports betting arena. Place bets, cashout, and chase glory." },
+      { property: "og:title", content: "LOMITA SHOOTERS LEAGUE" },
+      { name: "twitter:title", content: "LOMITA SHOOTERS LEAGUE" },
+      { property: "og:description", content: "Luxury virtual-token sports betting. No mercy, only glory." },
+      { name: "twitter:description", content: "Luxury virtual-token sports betting. No mercy, only glory." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/95c9daad-a9fe-4c72-b5b7-9dee8d1f06f1" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/95c9daad-a9fe-4c72-b5b7-9dee8d1f06f1" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -67,7 +67,7 @@ function RootComponent() {
         <AnimatedBackground />
         <div className="relative z-10 flex min-h-screen flex-col">
           <AppHeader />
-          <main className="flex-1"><Outlet /></main>
+          <MaintenanceGate><main className="flex-1"><Outlet /></main></MaintenanceGate>
         </div>
         <BetSlipFab />
         <ConfirmDialogHost />
