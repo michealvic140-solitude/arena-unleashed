@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown, ChevronUp, Trash2, X, Receipt } from "lucide-react";
 import { toast } from "sonner";
@@ -34,13 +35,23 @@ function BetSlipPanel() {
   const navigate = useNavigate();
   const [stake, setStake] = useState("100");
   const [placing, setPlacing] = useState(false);
+  const [limits, setLimits] = useState({ min: 2_000_000, max: 20_000_000, cap: 60_000_000 });
+  useEffect(() => {
+    supabase.from("platform_settings").select("min_stake, max_stake, max_payout").eq("id", 1).maybeSingle().then(({ data }) => {
+      if (data) setLimits({ min: Number(data.min_stake), max: Number(data.max_stake), cap: Number(data.max_payout) });
+    });
+  }, []);
   const stakeNum = parseFloat(stake) || 0;
-  const payout = stakeNum * totalOdds;
+  const rawPayout = stakeNum * totalOdds;
+  const payout = Math.min(rawPayout, limits.cap);
+  const cappedHit = rawPayout > limits.cap;
 
   const place = async () => {
     if (!user) { navigate({ to: "/login" }); return; }
     if (picks.length === 0) return;
     if (stakeNum <= 0) { toast.error("Enter a stake"); return; }
+    if (stakeNum < limits.min) { toast.error(`Minimum stake is ${formatTokens(limits.min)}`); return; }
+    if (stakeNum > limits.max) { toast.error(`Maximum stake is ${formatTokens(limits.max)}`); return; }
     if ((profile?.token_balance ?? 0) < stakeNum) { toast.error("Insufficient balance"); return; }
     setPlacing(true);
     const { data, error } = await supabase.rpc("place_bet", {
@@ -101,10 +112,20 @@ function BetSlipPanel() {
             <span className="font-mono font-bold text-foreground tabular-nums">{totalOdds.toFixed(2)}</span>
           </div>
           <Input type="number" min="1" step="1" value={stake} onChange={(e) => setStake(e.target.value)} placeholder="Stake" className="text-base" />
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>Min {formatTokens(limits.min)}</span>
+            <span>Max {formatTokens(limits.max)}</span>
+            <span>Cap {formatTokens(limits.cap)}</span>
+          </div>
           <div className="flex items-center justify-between rounded-lg bg-gold-gradient p-3 text-accent-foreground">
             <span className="text-xs font-semibold uppercase">Potential payout</span>
             <span className="font-mono text-lg font-extrabold tabular-nums">{formatTokens(payout)}</span>
           </div>
+          {cappedHit && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-2 text-[11px] text-warning">
+              Payout capped at {formatTokens(limits.cap)} — any winnings above this are not paid out.
+            </div>
+          )}
           <Button onClick={place} disabled={placing || picks.length === 0} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold">
             {placing ? "Placing…" : user ? "PLACE BET" : "Login to bet"}
           </Button>
