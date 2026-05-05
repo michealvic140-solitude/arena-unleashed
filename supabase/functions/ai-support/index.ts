@@ -1,4 +1,4 @@
-// SHOOTERS BET — AI Support Assistant
+// LOMITA SHOOTERS LEAGUE — AI Support Assistant
 // Streams responses from Lovable AI Gateway. Uses caller's JWT to authorize and
 // has access to user profile + open matches + user's bets to give grounded help.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are SHOOTERS BET's professional support AI. SHOOTERS BET is a virtual-token gun-fight betting platform between gangs and factions. You help users with:
+const SYSTEM_PROMPT = `You are LOMITA SHOOTERS LEAGUE's professional support AI. LOMITA SHOOTERS LEAGUE is a virtual-token gun-fight betting platform between gangs and factions. You help users with:
 - Today's matches & upcoming events
 - Suggesting odds & bet strategies (NEVER guarantee wins)
 - How to request tokens, place a bet, edit a bet, or cash out

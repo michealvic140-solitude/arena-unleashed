@@ -10,10 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TokensRouteImport } from './routes/tokens'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LiveRouteImport } from './routes/live'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,6 +24,11 @@ import { Route as MatchIdRouteImport } from './routes/match.$id'
 const TokensRoute = TokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SupportRoute = SupportRouteImport.update({
@@ -42,6 +49,11 @@ const LoginRoute = LoginRouteImport.update({
 const LiveRoute = LiveRouteImport.update({
   id: '/live',
   path: '/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -69,10 +81,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/live': typeof LiveRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/tokens': typeof TokensRoute
   '/match/$id': typeof MatchIdRoute
 }
@@ -80,10 +94,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/live': typeof LiveRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/tokens': typeof TokensRoute
   '/match/$id': typeof MatchIdRoute
 }
@@ -92,10 +108,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/live': typeof LiveRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/support': typeof SupportRoute
+  '/terms': typeof TermsRoute
   '/tokens': typeof TokensRoute
   '/match/$id': typeof MatchIdRoute
 }
@@ -105,10 +123,12 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/dashboard'
+    | '/forgot-password'
     | '/live'
     | '/login'
     | '/register'
     | '/support'
+    | '/terms'
     | '/tokens'
     | '/match/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -116,10 +136,12 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/dashboard'
+    | '/forgot-password'
     | '/live'
     | '/login'
     | '/register'
     | '/support'
+    | '/terms'
     | '/tokens'
     | '/match/$id'
   id:
@@ -127,10 +149,12 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/dashboard'
+    | '/forgot-password'
     | '/live'
     | '/login'
     | '/register'
     | '/support'
+    | '/terms'
     | '/tokens'
     | '/match/$id'
   fileRoutesById: FileRoutesById
@@ -139,10 +163,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LiveRoute: typeof LiveRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SupportRoute: typeof SupportRoute
+  TermsRoute: typeof TermsRoute
   TokensRoute: typeof TokensRoute
   MatchIdRoute: typeof MatchIdRoute
 }
@@ -154,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/tokens'
       fullPath: '/tokens'
       preLoaderRoute: typeof TokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -182,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/live'
       fullPath: '/live'
       preLoaderRoute: typeof LiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -219,10 +259,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LiveRoute: LiveRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SupportRoute: SupportRoute,
+  TermsRoute: TermsRoute,
   TokensRoute: TokensRoute,
   MatchIdRoute: MatchIdRoute,
 }

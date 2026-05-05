@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin — SHOOTERS BET" }] }),
+  head: () => ({ meta: [{ title: "Admin — LOMITA SHOOTERS LEAGUE" }] }),
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/login" });
@@ -33,7 +33,7 @@ function AdminPage() {
         </div>
         <div>
           <h1 className="text-3xl font-black brand">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">Full manual control over SHOOTERS BET.</p>
+          <p className="text-sm text-muted-foreground">Full manual control over LOMITA SHOOTERS LEAGUE.</p>
         </div>
       </div>
 
