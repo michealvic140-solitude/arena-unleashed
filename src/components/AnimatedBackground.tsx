@@ -1,15 +1,18 @@
 // Animated luxury background with floating gun/skull/target SVG icons + particle dots
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 
 const ICONS = ["💀", "🎯", "🔫", "💎", "🏆", "⚡"];
 
 interface Particle { left: number; top: number; size: number; delay: number; duration: number; icon: string; opacity: number }
 
 export function AnimatedBackground() {
-  const particles = useMemo<Particle[]>(() => {
-    const arr: Particle[] = [];
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [dots, setDots] = useState<{ left: number; top: number; size: number; delay: number; duration: number }[]>([]);
+
+  useEffect(() => {
+    const p: Particle[] = [];
     for (let i = 0; i < 22; i++) {
-      arr.push({
+      p.push({
         left: Math.random() * 100,
         top: Math.random() * 100,
         size: 14 + Math.random() * 28,
@@ -19,13 +22,10 @@ export function AnimatedBackground() {
         opacity: 0.05 + Math.random() * 0.10,
       });
     }
-    return arr;
-  }, []);
-
-  const dots = useMemo(() => {
-    const arr: { left: number; top: number; size: number; delay: number; duration: number }[] = [];
+    setParticles(p);
+    const d: { left: number; top: number; size: number; delay: number; duration: number }[] = [];
     for (let i = 0; i < 40; i++) {
-      arr.push({
+      d.push({
         left: Math.random() * 100,
         top: Math.random() * 100,
         size: 1 + Math.random() * 2.5,
@@ -33,7 +33,7 @@ export function AnimatedBackground() {
         duration: 8 + Math.random() * 14,
       });
     }
-    return arr;
+    setDots(d);
   }, []);
 
   return (
