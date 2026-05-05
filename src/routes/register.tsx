@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 
 export const Route = createFileRoute("/register")({
-  head: () => ({ meta: [{ title: "Create account — LomitaBet" }] }),
+  head: () => ({ meta: [{ title: "Create account — LOMITA SHOOTERS LEAGUE" }] }),
   component: RegisterPage,
 });
 
@@ -19,18 +19,23 @@ const schema = z.object({
   email: z.string().trim().email("Invalid email").max(255),
   phone: z.string().trim().max(30).optional().or(z.literal("")),
   discord_username: z.string().trim().max(60).optional().or(z.literal("")),
+  country: z.string().trim().min(2, "Country required").max(60),
+  server: z.string().trim().min(2, "Server required").max(60),
+  gang_faction: z.string().trim().min(2, "Gang/Faction name required").max(60),
+  gang_type: z.enum(["gang", "faction"], { message: "Pick gang or faction" }),
+  accept_terms: z.literal(true, { message: "You must accept the Terms" }),
   password: z.string().min(8, "Min 8 characters").max(72),
   confirm: z.string(),
 }).refine((d) => d.password === d.confirm, { message: "Passwords don't match", path: ["confirm"] });
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", discord_username: "", password: "", confirm: "" });
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", discord_username: "", country: "", server: "LOMITA AFR", gang_faction: "", gang_type: "gang" as "gang" | "faction", password: "", confirm: "", accept_terms: false });
   const [show1, setShow1] = useState(false);
   const [show2, setShow2] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value as never });
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +51,10 @@ function RegisterPage() {
           full_name: form.full_name.trim(),
           phone: form.phone.trim() || null,
           discord_username: form.discord_username.trim() || null,
-          server: "LOMITA AFR",
+          server: form.server.trim(),
+          country: form.country.trim(),
+          gang_faction: form.gang_faction.trim(),
+          gang_type: form.gang_type,
         },
       },
     });
@@ -76,9 +84,26 @@ function RegisterPage() {
           <Field label="Discord username">
             <Input value={form.discord_username} onChange={set("discord_username")} placeholder="yourname" />
           </Field>
-          <Field label="Server">
-            <Input value="LOMITA AFR" disabled readOnly />
+          <Field label="Country *">
+            <Input value={form.country} onChange={set("country")} placeholder="Nigeria" required />
           </Field>
+          <Field label="Server *">
+            <Input value={form.server} onChange={set("server")} placeholder="LOMITA AFR" required />
+          </Field>
+          <Field label="Gang / Faction name *">
+            <Input value={form.gang_faction} onChange={set("gang_faction")} placeholder="e.g. Rich Dynasty" required />
+          </Field>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Type *</Label>
+            <div className="flex gap-2">
+              {(["gang", "faction"] as const).map((t) => (
+                <button type="button" key={t} onClick={() => setForm({ ...form, gang_type: t })}
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold uppercase transition ${form.gang_type === t ? "bg-gold-gradient text-accent-foreground" : "glass text-muted-foreground"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
           <Field label="Password *">
             <div className="relative">
               <Input type={show1 ? "text" : "password"} value={form.password} onChange={set("password")} required autoComplete="new-password" />
@@ -95,6 +120,10 @@ function RegisterPage() {
               </button>
             </div>
           </Field>
+          <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={form.accept_terms} onChange={(e) => setForm({ ...form, accept_terms: e.target.checked })} className="mt-0.5" />
+            <span>I have read and accept the <Link to="/terms" className="text-primary hover:underline">Terms & Conditions</Link>, including the 60M token max payout cap and no-refund policy after a match starts.</span>
+          </label>
           <Button type="submit" className="w-full" disabled={loading}>{loading ? "Creating..." : "Create account"}</Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
