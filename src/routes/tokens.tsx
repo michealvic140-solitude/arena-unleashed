@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Coins, Image as ImageIcon, Upload } from "lucide-react";
+import { Coins, Image as ImageIcon, Upload, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -30,6 +30,17 @@ function TokensPage() {
   const [submitting, setSubmitting] = useState(false);
   const [requests, setRequests] = useState<TR[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [promoCode, setPromoCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+
+  const redeem = async () => {
+    if (!promoCode.trim()) return;
+    setRedeeming(true);
+    const { data, error } = await supabase.rpc("redeem_promo", { _code: promoCode.trim().toUpperCase() });
+    setRedeeming(false);
+    if (error) toast.error(error.message);
+    else { toast.success(`Redeemed! +${data} tokens`); setPromoCode(""); }
+  };
 
   const load = async () => {
     if (!user) return;
@@ -100,6 +111,16 @@ function TokensPage() {
             {submitting ? "Submitting…" : "Submit request"}
           </Button>
         </form>
+      </Card>
+
+      <Card className="mt-4 border-accent/30 bg-gradient-to-br from-accent/5 to-transparent p-5">
+        <h2 className="mb-3 flex items-center gap-2 font-semibold"><Ticket className="h-5 w-5 text-accent" />Redeem promo code</h2>
+        <div className="flex gap-2">
+          <Input placeholder="Enter code (e.g. WELCOME)" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} className="font-mono uppercase" />
+          <Button onClick={redeem} disabled={redeeming || !promoCode.trim()} className="bg-gold-gradient text-accent-foreground">
+            {redeeming ? "Redeeming…" : "Redeem"}
+          </Button>
+        </div>
       </Card>
 
       <Card className="mt-4 p-5">
