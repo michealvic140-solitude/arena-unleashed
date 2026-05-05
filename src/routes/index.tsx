@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Flame, Trophy, Sparkles, TrendingUp } from "lucide-react";
+import { Flame, Trophy, Sparkles, TrendingUp, Megaphone, CalendarClock, Crown, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Countdown } from "@/components/Countdown";
 import { useBetSlip } from "@/lib/betslip";
@@ -35,6 +35,34 @@ function HomePage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [odds, setOdds] = useState<Odd[]>([]);
   const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; countdown_to: string | null }>>([]);
+  const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string | null; description: string | null; link: string | null }>>([]);
+  const [ads, setAds] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; link: string | null }>>([]);
+  const [annIdx, setAnnIdx] = useState(0);
+  const [factions, setFactions] = useState<Array<{ id: string; name: string; type: string; score: number; rank: number }>>([]);
+  const [players, setPlayers] = useState<Array<{ id: string; player_name: string; gang_or_faction: string | null; score: number; rank: number }>>([]);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("events").select("id,title,description,image_url,countdown_to").eq("is_active", true).order("sort_order").limit(8),
+      supabase.from("announcements").select("id,title,description,link").eq("is_active", true).order("sort_order").limit(10),
+      supabase.from("advertisements").select("id,title,description,image_url,link").eq("is_active", true).order("sort_order").limit(6),
+      supabase.from("leaderboard_factions").select("id,name,type,score,rank").order("rank").limit(5),
+      supabase.from("leaderboard_players").select("id,player_name,gang_or_faction,score,rank").order("rank").limit(5),
+    ]).then(([e, a, d, f, p]) => {
+      setEvents((e.data ?? []) as typeof events);
+      setAnnouncements((a.data ?? []) as typeof announcements);
+      setAds((d.data ?? []) as typeof ads);
+      setFactions((f.data ?? []) as typeof factions);
+      setPlayers((p.data ?? []) as typeof players);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (announcements.length < 2) return;
+    const t = setInterval(() => setAnnIdx((i) => (i + 1) % announcements.length), 4500);
+    return () => clearInterval(t);
+  }, [announcements.length]);
 
   useEffect(() => {
     supabase.from("categories").select("*").order("sort_order").then(({ data }) => {
@@ -115,6 +143,73 @@ function HomePage() {
           <Trophy className="hidden h-32 w-32 text-accent/40 sm:block float-y" />
         </div>
       </section>
+
+      {/* Announcements auto-slider */}
+      {announcements.length > 0 && (
+        <div className="mb-6 overflow-hidden rounded-xl glass-gold px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Megaphone className="h-4 w-4 shrink-0 text-accent" />
+            <div key={announcements[annIdx]?.id} className="rise-in min-w-0 flex-1 text-sm">
+              <span className="font-bold text-gold">{announcements[annIdx]?.title}</span>
+              {announcements[annIdx]?.description && <span className="ml-2 text-muted-foreground">— {announcements[annIdx]?.description}</span>}
+            </div>
+            <div className="hidden gap-1 sm:flex">
+              {announcements.map((_, i) => (<span key={i} className={`h-1.5 w-1.5 rounded-full ${i === annIdx ? "bg-accent" : "bg-white/20"}`} />))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Events carousel with gold countdowns */}
+      {events.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            <CalendarClock className="h-4 w-4 text-accent" /> Upcoming events
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {events.map((ev) => (
+              <div key={ev.id} className="relative w-72 shrink-0 overflow-hidden rounded-2xl glass-strong">
+                {ev.image_url && <img src={ev.image_url} alt={ev.title} className="h-32 w-full object-cover" />}
+                <div className="p-4">
+                  <div className="font-bold">{ev.title}</div>
+                  {ev.description && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{ev.description}</p>}
+                  {ev.countdown_to && (
+                    <div className="mt-3 inline-flex items-center gap-1 rounded-full glass-gold px-3 py-1 text-xs font-bold text-gold">
+                      <Countdown to={ev.countdown_to} compact />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Leaderboards */}
+      {(factions.length > 0 || players.length > 0) && (
+        <section className="mb-8 grid gap-4 sm:grid-cols-2">
+          <Leaderboard title="Top Gangs / Factions" icon={<Crown className="h-4 w-4 text-accent" />} rows={factions.map((f) => ({ id: f.id, rank: f.rank, name: f.name, sub: f.type, score: f.score }))} />
+          <Leaderboard title="Top Players" icon={<Users className="h-4 w-4 text-accent" />} rows={players.map((p) => ({ id: p.id, rank: p.rank, name: p.player_name, sub: p.gang_or_faction ?? "—", score: p.score }))} />
+        </section>
+      )}
+
+      {/* Ads */}
+      {ads.length > 0 && (
+        <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {ads.map((ad) => {
+            const inner = (
+              <div className="group relative h-40 overflow-hidden rounded-2xl glass-strong">
+                {ad.image_url && <img src={ad.image_url} alt={ad.title} className="absolute inset-0 h-full w-full object-cover opacity-50 transition group-hover:opacity-70" />}
+                <div className="relative flex h-full flex-col justify-end p-4">
+                  <div className="font-bold">{ad.title}</div>
+                  {ad.description && <div className="line-clamp-2 text-xs text-muted-foreground">{ad.description}</div>}
+                </div>
+              </div>
+            );
+            return ad.link ? <a key={ad.id} href={ad.link} target="_blank" rel="noopener noreferrer">{inner}</a> : <div key={ad.id}>{inner}</div>;
+          })}
+        </section>
+      )}
 
       {/* Category tabs */}
       <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
@@ -209,5 +304,29 @@ function OddBox({ match_id, match_label, market, selection, value }: { match_id:
       <span className={active ? "font-bold" : "text-muted-foreground"}>{selection}</span>
       <span className="font-mono font-bold tabular-nums">{value?.toFixed(2) ?? "—"}</span>
     </button>
+  );
+}
+
+function Leaderboard({ title, icon, rows }: { title: string; icon: React.ReactNode; rows: Array<{ id: string; rank: number; name: string; sub: string; score: number }> }) {
+  return (
+    <div className="glass-strong rounded-2xl p-4">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">{icon} {title}</h3>
+      {rows.length === 0 ? (
+        <p className="py-4 text-center text-xs text-muted-foreground">No rankings yet.</p>
+      ) : (
+        <ol className="space-y-1.5">
+          {rows.map((r) => (
+            <li key={r.id} className="flex items-center gap-3 rounded-lg glass px-3 py-2">
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${r.rank === 1 ? "bg-gold-gradient text-accent-foreground" : r.rank <= 3 ? "bg-accent/20 text-accent" : "bg-white/5 text-muted-foreground"}`}>{r.rank}</span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-bold">{r.name}</div>
+                <div className="truncate text-xs text-muted-foreground">{r.sub}</div>
+              </div>
+              <div className="font-mono text-sm font-bold tabular-nums text-gold">{Number(r.score).toLocaleString()}</div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
