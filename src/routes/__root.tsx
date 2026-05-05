@@ -8,6 +8,7 @@ import { BetSlipFab } from "@/components/BetSlip";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { ConfirmDialogHost, PromptDialogHost } from "@/components/ConfirmDialog";
 import { MaintenanceGate } from "@/components/MaintenanceGate";
+import { SiteFooter } from "@/components/SiteFooter";
 
 function NotFoundComponent() {
   return (
@@ -69,6 +70,7 @@ function RootComponent() {
         <div className="relative z-10 flex min-h-screen flex-col">
           <AppHeader />
           <MaintenanceGate><main className="flex-1"><Outlet /></main></MaintenanceGate>
+          <SiteFooter />
         </div>
         <BetSlipFab />
         <ConfirmDialogHost />
