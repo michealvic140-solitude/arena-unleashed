@@ -441,28 +441,28 @@ function UsersAdmin() {
     const amt = parseFloat(amtStr);
     if (!amt) { toast.error("Invalid amount"); return; }
     const note = await promptDialog({ title: "Reason (optional)", placeholder: "e.g. Promo grant" }) ?? "";
-    const { error } = await supabase.rpc("admin_grant_tokens", { _user_id: u.id, _amount: amt, _note: note || null });
+    const { error } = await supabase.rpc("admin_grant_tokens", { _user_id: u.id, _amount: amt, _note: note || undefined });
     if (error) toast.error(error.message); else { toast.success("Updated"); load(); }
   };
   const ban = async (u: FullProfile) => {
     const next = !u.is_banned;
     const reason = next ? (await promptDialog({ title: "Ban reason", multiline: true, destructive: true, confirmText: "Ban user" })) : null;
     if (next && !reason) return;
-    const { error } = await supabase.rpc("admin_ban_user", { _user_id: u.id, _ban: next, _reason: reason });
+    const { error } = await supabase.rpc("admin_ban_user", { _user_id: u.id, _ban: next, _reason: reason ?? undefined });
     if (error) toast.error(error.message); else { toast.success(next ? "Banned" : "Unbanned"); load(); }
   };
   const mute = async (u: FullProfile) => {
     const next = !u.is_muted;
     const reason = next ? (await promptDialog({ title: "Mute reason", placeholder: "Why?" })) : null;
     if (next && reason === null) return;
-    const { error } = await supabase.rpc("admin_mute_user", { _user_id: u.id, _mute: next, _reason: reason });
+    const { error } = await supabase.rpc("admin_mute_user", { _user_id: u.id, _mute: next, _reason: reason ?? undefined });
     if (error) toast.error(error.message); else { toast.success(next ? "Muted" : "Unmuted"); load(); }
   };
   const restrict = async (u: FullProfile) => {
     const next = !u.is_restricted;
     const reason = next ? (await promptDialog({ title: "Restrict betting reason", placeholder: "Why?" })) : null;
     if (next && reason === null) return;
-    const { error } = await supabase.rpc("admin_restrict_user", { _user_id: u.id, _restrict: next, _reason: reason });
+    const { error } = await supabase.rpc("admin_restrict_user", { _user_id: u.id, _restrict: next, _reason: reason ?? undefined });
     if (error) toast.error(error.message); else { toast.success(next ? "Restricted" : "Unrestricted"); load(); }
   };
 
