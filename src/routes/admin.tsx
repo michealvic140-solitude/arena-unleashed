@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, ExternalLink } from "lucide-react";
+import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { confirmDialog, promptDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — LOMITA SHOOTERS LEAGUE" }] }),
@@ -40,6 +41,8 @@ function AdminPage() {
       <Tabs defaultValue="tokens">
         <TabsList className="glass mb-4 flex w-full flex-wrap gap-1 bg-transparent">
           <Tab value="tokens" icon={<Coins className="h-4 w-4" />}>Tokens</Tab>
+          <Tab value="users" icon={<Users className="h-4 w-4" />}>Users</Tab>
+          <Tab value="promos" icon={<Ticket className="h-4 w-4" />}>Promo Codes</Tab>
           <Tab value="roles" icon={<Users className="h-4 w-4" />}>Roles</Tab>
           <Tab value="categories" icon={<Layers className="h-4 w-4" />}>Categories</Tab>
           <Tab value="matches" icon={<Trophy className="h-4 w-4" />}>Matches</Tab>
@@ -47,6 +50,8 @@ function AdminPage() {
           <Tab value="audit" icon={<ScrollText className="h-4 w-4" />}>Audit</Tab>
         </TabsList>
         <TabsContent value="tokens"><TokenRequestsAdmin /></TabsContent>
+        <TabsContent value="users"><UsersAdmin /></TabsContent>
+        <TabsContent value="promos"><PromoCodesAdmin /></TabsContent>
         <TabsContent value="roles"><RolesAdmin /></TabsContent>
         <TabsContent value="categories"><CategoriesAdmin /></TabsContent>
         <TabsContent value="matches"><MatchesAdmin /></TabsContent>
@@ -85,7 +90,13 @@ function TokenRequestsAdmin() {
   }, [tab]);
 
   const action = async (r: TR, approve: boolean) => {
-    const note = window.prompt(approve ? "Optional note:" : "Reason (optional):") ?? "";
+    const note = await promptDialog({
+      title: approve ? "Approve token request" : "Deny token request",
+      description: approve ? "Optional note for the user:" : "Reason (shown to the user):",
+      placeholder: approve ? "e.g. Verified payment" : "e.g. Could not verify",
+      confirmText: approve ? "Approve" : "Deny",
+      destructive: !approve,
+    }) ?? "";
     const args = { _req_id: r.id, _admin_note: note || undefined };
     const { error } = approve
       ? await supabase.rpc("approve_token_request", args)
@@ -215,7 +226,7 @@ function CategoriesAdmin() {
     if (error) toast.error(error.message); else { toast.success("Added"); setName(""); setSlug(""); load(); }
   };
   const del = async (id: string) => {
-    if (!confirm("Delete?")) return;
+    if (!(await confirmDialog({ title: "Delete category?", destructive: true, confirmText: "Delete" }))) return;
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) toast.error(error.message); else load();
   };
@@ -276,9 +287,9 @@ function MatchesAdmin() {
 
   const endMatch = async (m: Mtch) => {
     const winner = m.home_score > m.away_score ? "home" : m.home_score < m.away_score ? "away" : "draw";
-    if (!confirm(`End match? Winner: ${winner.toUpperCase()}`)) return;
-    await update(m, { status: "ended", winner, ended_at: new Date().toISOString() });
-    toast.success(`Match ended — winner: ${winner}`);
+    if (!(await confirmDialog({ title: `End match — winner: ${winner.toUpperCase()}?`, description: "This will settle all open bets on this match.", confirmText: "End & Settle" }))) return;
+    const { error } = await supabase.rpc("settle_match", { _match_id: m.id, _winner: winner });
+    if (error) toast.error(error.message); else { toast.success(`Match ended — winner: ${winner}`); load(); }
   };
 
   return (
@@ -399,6 +410,181 @@ function AuditAdmin() {
             {l.metadata ? <pre className="mt-1 overflow-auto rounded bg-background/40 p-2 text-[11px]">{JSON.stringify(l.metadata, null, 2)}</pre> : null}
           </div>
         ))}
+    </div>
+  );
+}
+
+// ---- Users Management ----
+interface FullProfile {
+  id: string; full_name: string; email: string | null; phone: string | null;
+  token_balance: number; is_banned: boolean; is_muted: boolean; is_restricted: boolean;
+  ban_reason: string | null; mute_reason: string | null; restrict_reason: string | null;
+  country: string | null; gang_faction: string | null; gang_type: string | null; server: string;
+}
+
+function UsersAdmin() {
+  const [users, setUsers] = useState<FullProfile[]>([]);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "banned" | "muted" | "restricted">("all");
+
+  const load = async () => {
+    const { data } = await supabase.from("profiles")
+      .select("id, full_name, email, phone, token_balance, is_banned, is_muted, is_restricted, ban_reason, mute_reason, restrict_reason, country, gang_faction, gang_type, server")
+      .order("created_at", { ascending: false }).limit(200);
+    setUsers((data ?? []) as FullProfile[]);
+  };
+  useEffect(() => { load(); }, []);
+
+  const grant = async (u: FullProfile) => {
+    const amtStr = await promptDialog({ title: `Grant tokens to ${u.full_name}`, description: "Use a negative number to remove.", placeholder: "e.g. 1000000" });
+    if (!amtStr) return;
+    const amt = parseFloat(amtStr);
+    if (!amt) { toast.error("Invalid amount"); return; }
+    const note = await promptDialog({ title: "Reason (optional)", placeholder: "e.g. Promo grant" }) ?? "";
+    const { error } = await supabase.rpc("admin_grant_tokens", { _user_id: u.id, _amount: amt, _note: note || undefined });
+    if (error) toast.error(error.message); else { toast.success("Updated"); load(); }
+  };
+  const ban = async (u: FullProfile) => {
+    const next = !u.is_banned;
+    const reason = next ? (await promptDialog({ title: "Ban reason", multiline: true, destructive: true, confirmText: "Ban user" })) : null;
+    if (next && !reason) return;
+    const { error } = await supabase.rpc("admin_ban_user", { _user_id: u.id, _ban: next, _reason: reason ?? undefined });
+    if (error) toast.error(error.message); else { toast.success(next ? "Banned" : "Unbanned"); load(); }
+  };
+  const mute = async (u: FullProfile) => {
+    const next = !u.is_muted;
+    const reason = next ? (await promptDialog({ title: "Mute reason", placeholder: "Why?" })) : null;
+    if (next && reason === null) return;
+    const { error } = await supabase.rpc("admin_mute_user", { _user_id: u.id, _mute: next, _reason: reason ?? undefined });
+    if (error) toast.error(error.message); else { toast.success(next ? "Muted" : "Unmuted"); load(); }
+  };
+  const restrict = async (u: FullProfile) => {
+    const next = !u.is_restricted;
+    const reason = next ? (await promptDialog({ title: "Restrict betting reason", placeholder: "Why?" })) : null;
+    if (next && reason === null) return;
+    const { error } = await supabase.rpc("admin_restrict_user", { _user_id: u.id, _restrict: next, _reason: reason ?? undefined });
+    if (error) toast.error(error.message); else { toast.success(next ? "Restricted" : "Unrestricted"); load(); }
+  };
+
+  const filtered = users.filter((u) => {
+    if (filter === "banned" && !u.is_banned) return false;
+    if (filter === "muted" && !u.is_muted) return false;
+    if (filter === "restricted" && !u.is_restricted) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      return u.full_name?.toLowerCase().includes(s) || u.email?.toLowerCase().includes(s) || u.gang_faction?.toLowerCase().includes(s);
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Input placeholder="Search name, email or faction…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        {(["all", "banned", "muted", "restricted"] as const).map((f) => (
+          <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${filter === f ? "bg-primary text-primary-foreground" : "glass"}`}>{f}</button>
+        ))}
+      </div>
+      <div className="glass rounded-xl divide-y divide-white/5">
+        {filtered.length === 0 ? <div className="p-8 text-center text-muted-foreground">No users.</div> :
+          filtered.map((u) => (
+            <div key={u.id} className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold">{u.full_name}</span>
+                  {u.is_banned && <span className="rounded bg-destructive/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-destructive">BANNED</span>}
+                  {u.is_muted && <span className="rounded bg-warning/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-warning">MUTED</span>}
+                  {u.is_restricted && <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">RESTRICTED</span>}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {u.email ?? u.phone ?? "—"} · {u.gang_faction ?? "no faction"} ({u.gang_type ?? "?"}) · {u.country ?? "—"} · <span className="font-mono text-gold">{formatTokens(u.token_balance)}</span>
+                </div>
+                {u.ban_reason && <div className="mt-0.5 text-[11px] italic text-destructive">Ban: {u.ban_reason}</div>}
+                {u.mute_reason && <div className="mt-0.5 text-[11px] italic text-warning">Mute: {u.mute_reason}</div>}
+                {u.restrict_reason && <div className="mt-0.5 text-[11px] italic text-primary">Restrict: {u.restrict_reason}</div>}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Button size="sm" variant="outline" onClick={() => grant(u)} className="gap-1"><Coins className="h-3.5 w-3.5" />Tokens</Button>
+                <Button size="sm" variant={u.is_muted ? "secondary" : "outline"} onClick={() => mute(u)} className="gap-1"><MicOff className="h-3.5 w-3.5" />{u.is_muted ? "Unmute" : "Mute"}</Button>
+                <Button size="sm" variant={u.is_restricted ? "secondary" : "outline"} onClick={() => restrict(u)} className="gap-1"><Lock className="h-3.5 w-3.5" />{u.is_restricted ? "Unrestrict" : "Restrict"}</Button>
+                <Button size="sm" variant={u.is_banned ? "secondary" : "destructive"} onClick={() => ban(u)} className="gap-1"><Ban className="h-3.5 w-3.5" />{u.is_banned ? "Unban" : "Ban"}</Button>
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- Promo Codes ----
+interface Promo { id: string; code: string; amount: number; uses: number; max_uses: number; expires_at: string | null; is_active: boolean; note: string | null; created_at: string }
+
+function PromoCodesAdmin() {
+  const [promos, setPromos] = useState<Promo[]>([]);
+  const [code, setCode] = useState(""); const [amount, setAmount] = useState("");
+  const [maxUses, setMaxUses] = useState("1"); const [expires, setExpires] = useState(""); const [note, setNote] = useState("");
+
+  const load = async () => { const { data } = await supabase.from("promo_codes").select("*").order("created_at", { ascending: false }).limit(100); setPromos((data ?? []) as Promo[]); };
+  useEffect(() => { load(); }, []);
+
+  const create = async () => {
+    const amt = parseFloat(amount); const mu = parseInt(maxUses) || 1;
+    if (!code || !amt) { toast.error("Code and amount required"); return; }
+    const { error } = await supabase.from("promo_codes").insert({
+      code: code.toUpperCase(), amount: amt, max_uses: mu,
+      expires_at: expires ? new Date(expires).toISOString() : null,
+      note: note || null,
+    });
+    if (error) toast.error(error.message); else {
+      toast.success("Promo created");
+      setCode(""); setAmount(""); setMaxUses("1"); setExpires(""); setNote(""); load();
+    }
+  };
+  const toggle = async (p: Promo) => {
+    const { error } = await supabase.from("promo_codes").update({ is_active: !p.is_active }).eq("id", p.id);
+    if (error) toast.error(error.message); else load();
+  };
+  const del = async (p: Promo) => {
+    if (!(await confirmDialog({ title: `Delete code ${p.code}?`, destructive: true, confirmText: "Delete" }))) return;
+    const { error } = await supabase.from("promo_codes").delete().eq("id", p.id);
+    if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="glass rounded-xl p-4">
+        <h3 className="mb-3 font-bold">Generate promo code</h3>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <Input placeholder="CODE (e.g. WELCOME)" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
+          <Input type="number" placeholder="Token amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Input type="number" min="1" placeholder="Max uses" value={maxUses} onChange={(e) => setMaxUses(e.target.value)} />
+          <Input type="datetime-local" placeholder="Expires" value={expires} onChange={(e) => setExpires(e.target.value)} />
+          <Button onClick={create} className="bg-gold-gradient text-accent-foreground">Create</Button>
+        </div>
+        <Textarea className="mt-2" placeholder="Internal note (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+      </div>
+      <div className="glass rounded-xl divide-y divide-white/5">
+        {promos.length === 0 ? <div className="p-8 text-center text-muted-foreground">No promo codes yet.</div> :
+          promos.map((p) => (
+            <div key={p.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-lg font-black text-gold">{p.code}</span>
+                  <span className="font-mono font-bold">{formatTokens(p.amount)}</span>
+                  {!p.is_active && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase">disabled</span>}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {p.uses}/{p.max_uses} used · {p.expires_at ? `expires ${new Date(p.expires_at).toLocaleString()}` : "no expiry"}
+                </div>
+                {p.note && <div className="text-[11px] italic text-muted-foreground">{p.note}</div>}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => toggle(p)}>{p.is_active ? "Disable" : "Enable"}</Button>
+                <Button size="sm" variant="destructive" onClick={() => del(p)}>Delete</Button>
+              </div>
+            </div>
+          ))}
+      </div>
     </div>
   );
 }
