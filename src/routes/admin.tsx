@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, ExternalLink } from "lucide-react";
+import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { confirmDialog, promptDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — LOMITA SHOOTERS LEAGUE" }] }),
@@ -40,6 +41,8 @@ function AdminPage() {
       <Tabs defaultValue="tokens">
         <TabsList className="glass mb-4 flex w-full flex-wrap gap-1 bg-transparent">
           <Tab value="tokens" icon={<Coins className="h-4 w-4" />}>Tokens</Tab>
+          <Tab value="users" icon={<Users className="h-4 w-4" />}>Users</Tab>
+          <Tab value="promos" icon={<Ticket className="h-4 w-4" />}>Promo Codes</Tab>
           <Tab value="roles" icon={<Users className="h-4 w-4" />}>Roles</Tab>
           <Tab value="categories" icon={<Layers className="h-4 w-4" />}>Categories</Tab>
           <Tab value="matches" icon={<Trophy className="h-4 w-4" />}>Matches</Tab>
@@ -47,6 +50,8 @@ function AdminPage() {
           <Tab value="audit" icon={<ScrollText className="h-4 w-4" />}>Audit</Tab>
         </TabsList>
         <TabsContent value="tokens"><TokenRequestsAdmin /></TabsContent>
+        <TabsContent value="users"><UsersAdmin /></TabsContent>
+        <TabsContent value="promos"><PromoCodesAdmin /></TabsContent>
         <TabsContent value="roles"><RolesAdmin /></TabsContent>
         <TabsContent value="categories"><CategoriesAdmin /></TabsContent>
         <TabsContent value="matches"><MatchesAdmin /></TabsContent>
