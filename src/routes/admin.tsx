@@ -90,7 +90,13 @@ function TokenRequestsAdmin() {
   }, [tab]);
 
   const action = async (r: TR, approve: boolean) => {
-    const note = window.prompt(approve ? "Optional note:" : "Reason (optional):") ?? "";
+    const note = await promptDialog({
+      title: approve ? "Approve token request" : "Deny token request",
+      description: approve ? "Optional note for the user:" : "Reason (shown to the user):",
+      placeholder: approve ? "e.g. Verified payment" : "e.g. Could not verify",
+      confirmText: approve ? "Approve" : "Deny",
+      destructive: !approve,
+    }) ?? "";
     const args = { _req_id: r.id, _admin_note: note || undefined };
     const { error } = approve
       ? await supabase.rpc("approve_token_request", args)
@@ -220,7 +226,7 @@ function CategoriesAdmin() {
     if (error) toast.error(error.message); else { toast.success("Added"); setName(""); setSlug(""); load(); }
   };
   const del = async (id: string) => {
-    if (!confirm("Delete?")) return;
+    if (!(await confirmDialog({ title: "Delete category?", destructive: true, confirmText: "Delete" }))) return;
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) toast.error(error.message); else load();
   };
@@ -281,9 +287,9 @@ function MatchesAdmin() {
 
   const endMatch = async (m: Mtch) => {
     const winner = m.home_score > m.away_score ? "home" : m.home_score < m.away_score ? "away" : "draw";
-    if (!confirm(`End match? Winner: ${winner.toUpperCase()}`)) return;
-    await update(m, { status: "ended", winner, ended_at: new Date().toISOString() });
-    toast.success(`Match ended — winner: ${winner}`);
+    if (!(await confirmDialog({ title: `End match — winner: ${winner.toUpperCase()}?`, description: "This will settle all open bets on this match.", confirmText: "End & Settle" }))) return;
+    const { error } = await supabase.rpc("settle_match", { _match_id: m.id, _winner: winner });
+    if (error) toast.error(error.message); else { toast.success(`Match ended — winner: ${winner}`); load(); }
   };
 
   return (
