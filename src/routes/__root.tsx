@@ -7,6 +7,7 @@ import { BetSlipProvider } from "@/lib/betslip";
 import { BetSlipFab } from "@/components/BetSlip";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { ConfirmDialogHost, PromptDialogHost } from "@/components/ConfirmDialog";
+import { MaintenanceGate } from "@/components/MaintenanceGate";
 
 function NotFoundComponent() {
   return (
