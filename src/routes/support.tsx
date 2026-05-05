@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LifeBuoy, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/support")({
-  head: () => ({ meta: [{ title: "Support — SHOOTERS BET" }] }),
+  head: () => ({ meta: [{ title: "Support — LOMITA SHOOTERS LEAGUE" }] }),
   component: SupportPage,
 });
 

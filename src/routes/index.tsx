@@ -8,7 +8,7 @@ import { useBetSlip } from "@/lib/betslip";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SHOOTERS BET — Luxury Virtual Sports Betting" },
+      { title: "LOMITA SHOOTERS LEAGUE — Luxury Virtual Sports Betting" },
       { name: "description", content: "Browse upcoming and live matches. Bet using virtual tokens. Cashout anytime." },
     ],
   }),

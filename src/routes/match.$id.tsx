@@ -6,7 +6,7 @@ import { Countdown } from "@/components/Countdown";
 import { useBetSlip } from "@/lib/betslip";
 
 export const Route = createFileRoute("/match/$id")({
-  head: () => ({ meta: [{ title: "Match — SHOOTERS BET" }] }),
+  head: () => ({ meta: [{ title: "Match — LOMITA SHOOTERS LEAGUE" }] }),
   component: MatchPage,
 });
 
