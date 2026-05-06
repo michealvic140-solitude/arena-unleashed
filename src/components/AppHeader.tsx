@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Coins, Crosshair, LifeBuoy, LogIn, LogOut, Menu, Shield, User as UserIcon } from "lucide-react";
+import { Coins, Crosshair, LifeBuoy, LogIn, LogOut, Menu, Shield, User as UserIcon, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { formatTokens } from "@/lib/format";
@@ -37,6 +37,7 @@ export function AppHeader() {
           <NavLink to="/live">Live</NavLink>
           <NavLink to="/dashboard">My Bets</NavLink>
           <NavLink to="/tokens">Tokens</NavLink>
+          <NavLink to="/wallet">Wallet</NavLink>
           <NavLink to="/chat">Chat</NavLink>
           <NavLink to="/support">Support</NavLink>
           <NavLink to="/terms">Terms</NavLink>
@@ -78,6 +79,7 @@ export function AppHeader() {
             <NavLink to="/live" onClick={() => setOpen(false)}>Live</NavLink>
             <NavLink to="/dashboard" onClick={() => setOpen(false)}>My Bets</NavLink>
             <NavLink to="/tokens" onClick={() => setOpen(false)}>Tokens</NavLink>
+            <NavLink to="/wallet" onClick={() => setOpen(false)}><Wallet className="mr-1 inline h-3.5 w-3.5" /> Wallet</NavLink>
             <NavLink to="/chat" onClick={() => setOpen(false)}>Chat</NavLink>
             <NavLink to="/support" onClick={() => setOpen(false)}><LifeBuoy className="mr-1 inline h-3.5 w-3.5" /> Support</NavLink>
             <NavLink to="/terms" onClick={() => setOpen(false)}>Terms</NavLink>

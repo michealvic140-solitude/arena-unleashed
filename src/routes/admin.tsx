@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock } from "lucide-react";
+import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock, BarChart3, Megaphone, Settings as SettingsIcon } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -47,6 +48,9 @@ function AdminPage() {
           <Tab value="categories" icon={<Layers className="h-4 w-4" />}>Categories</Tab>
           <Tab value="matches" icon={<Trophy className="h-4 w-4" />}>Matches</Tab>
           <Tab value="calc" icon={<Calculator className="h-4 w-4" />}>Odds Calc</Tab>
+          <Tab value="broadcast" icon={<Megaphone className="h-4 w-4" />}>Broadcast</Tab>
+          <Tab value="settings" icon={<SettingsIcon className="h-4 w-4" />}>Settings</Tab>
+          <Tab value="analytics" icon={<BarChart3 className="h-4 w-4" />}>Analytics</Tab>
           <Tab value="audit" icon={<ScrollText className="h-4 w-4" />}>Audit</Tab>
         </TabsList>
         <TabsContent value="tokens"><TokenRequestsAdmin /></TabsContent>
@@ -56,6 +60,9 @@ function AdminPage() {
         <TabsContent value="categories"><CategoriesAdmin /></TabsContent>
         <TabsContent value="matches"><MatchesAdmin /></TabsContent>
         <TabsContent value="calc"><OddsCalculator /></TabsContent>
+        <TabsContent value="broadcast"><BroadcastAdmin /></TabsContent>
+        <TabsContent value="settings"><SettingsAdmin /></TabsContent>
+        <TabsContent value="analytics"><AnalyticsAdmin /></TabsContent>
         <TabsContent value="audit"><AuditAdmin /></TabsContent>
       </Tabs>
     </div>
@@ -585,6 +592,257 @@ function PromoCodesAdmin() {
             </div>
           ))}
       </div>
+    </div>
+  );
+}
+
+// ---- Broadcast Notifications ----
+function BroadcastAdmin() {
+  const [title, setTitle] = useState(""); const [body, setBody] = useState(""); const [link, setLink] = useState("");
+  const [scope, setScope] = useState<"all" | "shooters" | "gang_leaders">("all");
+  const [sending, setSending] = useState(false);
+  const [recent, setRecent] = useState<Array<{ id: string; title: string; body: string | null; created_at: string }>>([]);
+
+  const loadRecent = async () => {
+    const { data } = await supabase.from("notifications").select("id,title,body,created_at").order("created_at", { ascending: false }).limit(20);
+    setRecent((data ?? []) as typeof recent);
+  };
+  useEffect(() => { loadRecent(); }, []);
+
+  const send = async () => {
+    if (!title.trim()) { toast.error("Title is required"); return; }
+    setSending(true);
+    try {
+      let userIds: string[] = [];
+      if (scope === "all") {
+        const { data } = await supabase.from("profiles").select("id").eq("is_banned", false);
+        userIds = (data ?? []).map((p) => p.id);
+      } else {
+        const role = scope === "shooters" ? "shooter" : "gang_leader";
+        const { data } = await supabase.from("user_roles").select("user_id").eq("role", role);
+        userIds = (data ?? []).map((r) => r.user_id);
+      }
+      if (!userIds.length) { toast.error("No recipients"); return; }
+      const rows = userIds.map((uid) => ({ user_id: uid, title: title.trim(), body: body.trim() || null, link: link.trim() || null }));
+      // chunk to avoid payload size limits
+      for (let i = 0; i < rows.length; i += 500) {
+        const { error } = await supabase.from("notifications").insert(rows.slice(i, i + 500));
+        if (error) throw error;
+      }
+      toast.success(`Sent to ${userIds.length} users`);
+      setTitle(""); setBody(""); setLink(""); loadRecent();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="glass rounded-xl p-4">
+        <h3 className="mb-3 font-bold">Broadcast notification</h3>
+        <div className="grid gap-2">
+          <Input placeholder="Title (e.g. New event tonight!)" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Textarea placeholder="Body / message" value={body} onChange={(e) => setBody(e.target.value)} rows={3} />
+          <Input placeholder="Link (optional, e.g. /live)" value={link} onChange={(e) => setLink(e.target.value)} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Label className="text-xs">Audience:</Label>
+            {(["all", "shooters", "gang_leaders"] as const).map((s) => (
+              <button key={s} onClick={() => setScope(s)} className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${scope === s ? "bg-primary text-primary-foreground" : "glass"}`}>{s.replace("_", " ")}</button>
+            ))}
+            <Button onClick={send} disabled={sending} className="ml-auto bg-gold-gradient text-accent-foreground">{sending ? "Sending…" : "Send"}</Button>
+          </div>
+        </div>
+      </div>
+      <div className="glass rounded-xl divide-y divide-white/5">
+        <div className="p-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Recent notifications</div>
+        {recent.length === 0 ? <div className="p-6 text-center text-muted-foreground text-sm">No notifications yet.</div> :
+          recent.map((n) => (
+            <div key={n.id} className="p-3 text-sm">
+              <div className="font-semibold">{n.title}</div>
+              {n.body && <div className="text-xs text-muted-foreground">{n.body}</div>}
+              <div className="text-[11px] text-muted-foreground">{new Date(n.created_at).toLocaleString()}</div>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- Platform Settings ----
+function SettingsAdmin() {
+  const [s, setS] = useState<{ maintenance_mode: boolean; maintenance_message: string | null; max_payout: number; min_stake: number; max_stake: number; contact_email: string | null; contact_phone: string | null; contact_whatsapp: string | null; contact_sms: string | null; about_us: string | null; why_trust_us: string | null } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.from("platform_settings").select("*").eq("id", 1).maybeSingle().then(({ data }) => setS(data as typeof s));
+  }, []);
+
+  const save = async () => {
+    if (!s) return;
+    setSaving(true);
+    const { error } = await supabase.from("platform_settings").update({
+      maintenance_mode: s.maintenance_mode,
+      maintenance_message: s.maintenance_message,
+      max_payout: s.max_payout, min_stake: s.min_stake, max_stake: s.max_stake,
+      contact_email: s.contact_email, contact_phone: s.contact_phone,
+      contact_whatsapp: s.contact_whatsapp, contact_sms: s.contact_sms,
+      about_us: s.about_us, why_trust_us: s.why_trust_us,
+    }).eq("id", 1);
+    setSaving(false);
+    if (error) toast.error(error.message); else toast.success("Settings saved");
+  };
+
+  if (!s) return <div className="glass rounded-xl p-8 text-center text-muted-foreground">Loading…</div>;
+  const set = <K extends keyof typeof s>(k: K, v: (typeof s)[K]) => setS({ ...s, [k]: v });
+
+  return (
+    <div className="space-y-3">
+      <div className="glass-strong rounded-xl p-4">
+        <h3 className="mb-3 font-bold">Maintenance mode</h3>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={s.maintenance_mode} onChange={(e) => set("maintenance_mode", e.target.checked)} />
+          <span>Block all user actions and show maintenance notice</span>
+        </label>
+        <Textarea className="mt-2" placeholder="Maintenance message" value={s.maintenance_message ?? ""} onChange={(e) => set("maintenance_message", e.target.value)} rows={2} />
+      </div>
+      <div className="glass rounded-xl p-4">
+        <h3 className="mb-3 font-bold">Bet limits</h3>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div><Label>Min stake</Label><Input type="number" value={s.min_stake} onChange={(e) => set("min_stake", parseFloat(e.target.value) || 0)} /></div>
+          <div><Label>Max stake</Label><Input type="number" value={s.max_stake} onChange={(e) => set("max_stake", parseFloat(e.target.value) || 0)} /></div>
+          <div><Label>Max payout</Label><Input type="number" value={s.max_payout} onChange={(e) => set("max_payout", parseFloat(e.target.value) || 0)} /></div>
+        </div>
+      </div>
+      <div className="glass rounded-xl p-4">
+        <h3 className="mb-3 font-bold">Contact info (footer)</h3>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div><Label>Email</Label><Input value={s.contact_email ?? ""} onChange={(e) => set("contact_email", e.target.value)} /></div>
+          <div><Label>Phone</Label><Input value={s.contact_phone ?? ""} onChange={(e) => set("contact_phone", e.target.value)} /></div>
+          <div><Label>WhatsApp</Label><Input value={s.contact_whatsapp ?? ""} onChange={(e) => set("contact_whatsapp", e.target.value)} /></div>
+          <div><Label>SMS</Label><Input value={s.contact_sms ?? ""} onChange={(e) => set("contact_sms", e.target.value)} /></div>
+        </div>
+      </div>
+      <div className="glass rounded-xl p-4">
+        <h3 className="mb-3 font-bold">About / Why trust us</h3>
+        <div className="grid gap-2">
+          <div><Label>About Us</Label><Textarea rows={3} value={s.about_us ?? ""} onChange={(e) => set("about_us", e.target.value)} /></div>
+          <div><Label>Why Trust Us</Label><Textarea rows={3} value={s.why_trust_us ?? ""} onChange={(e) => set("why_trust_us", e.target.value)} /></div>
+        </div>
+      </div>
+      <Button onClick={save} disabled={saving} className="bg-gold-gradient text-accent-foreground">{saving ? "Saving…" : "Save settings"}</Button>
+    </div>
+  );
+}
+
+// ---- Analytics ----
+function AnalyticsAdmin() {
+  const [stats, setStats] = useState<{ users: number; openBets: number; wonBets: number; lostBets: number; revenue: number; payouts: number } | null>(null);
+  const [daily, setDaily] = useState<Array<{ day: string; staked: number; payout: number; net: number }>>([]);
+  const [outcome, setOutcome] = useState<Array<{ name: string; value: number; color: string }>>([]);
+
+  useEffect(() => {
+    (async () => {
+      const since = new Date(Date.now() - 30 * 86400_000).toISOString();
+      const [{ count: users }, { data: bets }, { data: tx }] = await Promise.all([
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("bets").select("status, stake, payout, created_at").gte("created_at", since).limit(5000),
+        supabase.from("transactions").select("type, amount, created_at").gte("created_at", since).limit(5000),
+      ]);
+      const open = (bets ?? []).filter((b) => b.status === "open").length;
+      const won = (bets ?? []).filter((b) => b.status === "won").length;
+      const lost = (bets ?? []).filter((b) => b.status === "lost").length;
+      const totalStaked = (tx ?? []).filter((t) => t.type === "bet_stake").reduce((a, t) => a + Math.abs(Number(t.amount)), 0);
+      const totalPayouts = (tx ?? []).filter((t) => t.type === "bet_payout" || t.type === "cashout").reduce((a, t) => a + Number(t.amount), 0);
+      setStats({ users: users ?? 0, openBets: open, wonBets: won, lostBets: lost, revenue: totalStaked - totalPayouts, payouts: totalPayouts });
+
+      const byDay: Record<string, { staked: number; payout: number }> = {};
+      for (const b of bets ?? []) {
+        const d = (b.created_at as string).slice(0, 10);
+        byDay[d] = byDay[d] || { staked: 0, payout: 0 };
+        byDay[d].staked += Number(b.stake);
+        if (b.status === "won") byDay[d].payout += Number(b.payout ?? 0);
+      }
+      const daysArr = Object.entries(byDay)
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([day, v]) => ({ day: day.slice(5), staked: Math.round(v.staked), payout: Math.round(v.payout), net: Math.round(v.staked - v.payout) }));
+      setDaily(daysArr);
+
+      setOutcome([
+        { name: "Won", value: won, color: "oklch(0.78 0.18 150)" },
+        { name: "Lost", value: lost, color: "oklch(0.62 0.22 27)" },
+        { name: "Open", value: open, color: "oklch(0.83 0.16 88)" },
+      ]);
+    })();
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Total users" value={String(stats?.users ?? "…")} />
+        <Stat label="Open bets" value={String(stats?.openBets ?? "…")} />
+        <Stat label="Won / Lost" value={`${stats?.wonBets ?? 0} / ${stats?.lostBets ?? 0}`} />
+        <Stat label="Net revenue (30d)" value={stats ? formatTokens(stats.revenue) : "…"} highlight />
+      </div>
+
+      <div className="glass-strong rounded-2xl p-4">
+        <h3 className="mb-3 font-bold">Daily revenue (last 30 days)</h3>
+        <div className="h-72 w-full">
+          <ResponsiveContainer>
+            <LineChart data={daily}>
+              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.97 0.005 100 / 0.1)" />
+              <XAxis dataKey="day" stroke="oklch(0.72 0.015 260)" fontSize={11} />
+              <YAxis stroke="oklch(0.72 0.015 260)" fontSize={11} />
+              <Tooltip contentStyle={{ background: "oklch(0.13 0.015 260)", border: "1px solid oklch(0.97 0.005 100 / 0.1)", borderRadius: 8, fontSize: 12 }} />
+              <Line type="monotone" dataKey="staked" stroke="oklch(0.83 0.16 88)" strokeWidth={2} dot={false} name="Staked" />
+              <Line type="monotone" dataKey="payout" stroke="oklch(0.62 0.22 27)" strokeWidth={2} dot={false} name="Payouts" />
+              <Line type="monotone" dataKey="net" stroke="oklch(0.72 0.18 155)" strokeWidth={2.5} dot={false} name="Net" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="glass-strong rounded-2xl p-4">
+          <h3 className="mb-3 font-bold">Bets staked per day</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer>
+              <BarChart data={daily}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.97 0.005 100 / 0.1)" />
+                <XAxis dataKey="day" stroke="oklch(0.72 0.015 260)" fontSize={11} />
+                <YAxis stroke="oklch(0.72 0.015 260)" fontSize={11} />
+                <Tooltip contentStyle={{ background: "oklch(0.13 0.015 260)", border: "1px solid oklch(0.97 0.005 100 / 0.1)", borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="staked" fill="oklch(0.72 0.18 155)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="glass-strong rounded-2xl p-4">
+          <h3 className="mb-3 font-bold">Won vs Lost vs Open</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie data={outcome} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={3}>
+                  {outcome.map((o, i) => <Cell key={i} fill={o.color} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: "oklch(0.13 0.015 260)", border: "1px solid oklch(0.97 0.005 100 / 0.1)", borderRadius: 8, fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-2 flex justify-center gap-4 text-xs">
+            {outcome.map((o) => (
+              <span key={o.name} className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: o.color }} /> {o.name}: <b>{o.value}</b></span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-2xl p-4 ${highlight ? "bg-gold-gradient text-accent-foreground" : "glass-strong"}`}>
+      <div className={`text-[11px] uppercase tracking-widest ${highlight ? "" : "text-muted-foreground"}`}>{label}</div>
+      <div className="mt-1 font-mono text-2xl font-black tabular-nums">{value}</div>
     </div>
   );
 }
