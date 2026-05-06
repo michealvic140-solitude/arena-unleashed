@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 
 export const Route = createFileRoute("/tokens")({
-  head: () => ({ meta: [{ title: "Request Tokens — LomitaBet" }] }),
+  head: () => ({ meta: [{ title: "Request Tokens — LOMITA SHOOTERS LEAGUE" }] }),
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/login" });
