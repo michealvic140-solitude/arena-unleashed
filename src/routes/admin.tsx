@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock } from "lucide-react";
+import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock, BarChart3, Megaphone, Settings as SettingsIcon } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -47,6 +48,9 @@ function AdminPage() {
           <Tab value="categories" icon={<Layers className="h-4 w-4" />}>Categories</Tab>
           <Tab value="matches" icon={<Trophy className="h-4 w-4" />}>Matches</Tab>
           <Tab value="calc" icon={<Calculator className="h-4 w-4" />}>Odds Calc</Tab>
+          <Tab value="broadcast" icon={<Megaphone className="h-4 w-4" />}>Broadcast</Tab>
+          <Tab value="settings" icon={<SettingsIcon className="h-4 w-4" />}>Settings</Tab>
+          <Tab value="analytics" icon={<BarChart3 className="h-4 w-4" />}>Analytics</Tab>
           <Tab value="audit" icon={<ScrollText className="h-4 w-4" />}>Audit</Tab>
         </TabsList>
         <TabsContent value="tokens"><TokenRequestsAdmin /></TabsContent>
@@ -56,6 +60,9 @@ function AdminPage() {
         <TabsContent value="categories"><CategoriesAdmin /></TabsContent>
         <TabsContent value="matches"><MatchesAdmin /></TabsContent>
         <TabsContent value="calc"><OddsCalculator /></TabsContent>
+        <TabsContent value="broadcast"><BroadcastAdmin /></TabsContent>
+        <TabsContent value="settings"><SettingsAdmin /></TabsContent>
+        <TabsContent value="analytics"><AnalyticsAdmin /></TabsContent>
         <TabsContent value="audit"><AuditAdmin /></TabsContent>
       </Tabs>
     </div>
