@@ -23,6 +23,8 @@ export type Database = {
           is_active: boolean
           link: string | null
           match_id: string | null
+          popout: boolean
+          size: string
           sort_order: number
           title: string
         }
@@ -34,6 +36,8 @@ export type Database = {
           is_active?: boolean
           link?: string | null
           match_id?: string | null
+          popout?: boolean
+          size?: string
           sort_order?: number
           title: string
         }
@@ -45,6 +49,8 @@ export type Database = {
           is_active?: boolean
           link?: string | null
           match_id?: string | null
+          popout?: boolean
+          size?: string
           sort_order?: number
           title?: string
         }
@@ -533,34 +539,52 @@ export type Database = {
       }
       leaderboard_factions: {
         Row: {
+          draws: number
           id: string
+          losses: number
           name: string
           notes: string | null
+          played: number
+          points: number
           rank: number
           score: number
+          top_player: string | null
           type: string
           updated_at: string
           week_start: string
+          wins: number
         }
         Insert: {
+          draws?: number
           id?: string
+          losses?: number
           name: string
           notes?: string | null
+          played?: number
+          points?: number
           rank: number
           score?: number
+          top_player?: string | null
           type: string
           updated_at?: string
           week_start?: string
+          wins?: number
         }
         Update: {
+          draws?: number
           id?: string
+          losses?: number
           name?: string
           notes?: string | null
+          played?: number
+          points?: number
           rank?: number
           score?: number
+          top_player?: string | null
           type?: string
           updated_at?: string
           week_start?: string
+          wins?: number
         }
         Relationships: []
       }
@@ -569,34 +593,43 @@ export type Database = {
           gang_or_faction: string | null
           gf_type: string | null
           id: string
+          losses: number
+          played: number
           player_name: string
           player_role: string | null
           rank: number
           score: number
           updated_at: string
           week_start: string
+          wins: number
         }
         Insert: {
           gang_or_faction?: string | null
           gf_type?: string | null
           id?: string
+          losses?: number
+          played?: number
           player_name: string
           player_role?: string | null
           rank: number
           score?: number
           updated_at?: string
           week_start?: string
+          wins?: number
         }
         Update: {
           gang_or_faction?: string | null
           gf_type?: string | null
           id?: string
+          losses?: number
+          played?: number
           player_name?: string
           player_role?: string | null
           rank?: number
           score?: number
           updated_at?: string
           week_start?: string
+          wins?: number
         }
         Relationships: []
       }
@@ -1296,6 +1329,48 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          gang_name: string
+          id: string
+          ingame_name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"]
+          ticket_id: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          gang_name: string
+          id?: string
+          ingame_name: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          ticket_id?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          gang_name?: string
+          id?: string
+          ingame_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          ticket_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1325,10 +1400,18 @@ export type Database = {
         Args: { _admin_note?: string; _req_id: string }
         Returns: undefined
       }
+      approve_withdrawal: {
+        Args: { _note?: string; _req_id: string }
+        Returns: undefined
+      }
       book_by_code: { Args: { _code: string; _stake: number }; Returns: string }
       cashout_bet: {
         Args: { _bet_id: string; _fraction?: number }
         Returns: number
+      }
+      decline_withdrawal: {
+        Args: { _note: string; _req_id: string }
+        Returns: undefined
       }
       deny_token_request: {
         Args: { _admin_note?: string; _req_id: string }
@@ -1363,6 +1446,15 @@ export type Database = {
         Args: { _match_id: string; _winner: string }
         Returns: undefined
       }
+      submit_withdrawal: {
+        Args: {
+          _amount: number
+          _gang: string
+          _ingame: string
+          _ticket?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role:
@@ -1393,6 +1485,7 @@ export type Database = {
         | "token_grant"
         | "promo"
         | "penalty"
+      withdrawal_status: "pending" | "approved" | "declined"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1550,6 +1643,7 @@ export const Constants = {
         "promo",
         "penalty",
       ],
+      withdrawal_status: ["pending", "approved", "declined"],
     },
   },
 } as const
