@@ -37,18 +37,18 @@ function HomePage() {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; countdown_to: string | null }>>([]);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string | null; description: string | null; link: string | null }>>([]);
-  const [ads, setAds] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; link: string | null }>>([]);
+  const [ads, setAds] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; link: string | null; size: string; popout: boolean }>>([]);
   const [annIdx, setAnnIdx] = useState(0);
-  const [factions, setFactions] = useState<Array<{ id: string; name: string; type: string; score: number; rank: number }>>([]);
-  const [players, setPlayers] = useState<Array<{ id: string; player_name: string; gang_or_faction: string | null; score: number; rank: number }>>([]);
+  const [factions, setFactions] = useState<Array<{ id: string; name: string; type: string; score: number; rank: number; wins: number; losses: number; draws: number; points: number; played: number; top_player: string | null }>>([]);
+  const [players, setPlayers] = useState<Array<{ id: string; player_name: string; gang_or_faction: string | null; score: number; rank: number; wins: number; losses: number; played: number }>>([]);
 
   useEffect(() => {
     Promise.all([
       supabase.from("events").select("id,title,description,image_url,countdown_to").eq("is_active", true).order("sort_order").limit(8),
       supabase.from("announcements").select("id,title,description,link").eq("is_active", true).order("sort_order").limit(10),
-      supabase.from("advertisements").select("id,title,description,image_url,link").eq("is_active", true).order("sort_order").limit(6),
-      supabase.from("leaderboard_factions").select("id,name,type,score,rank").order("rank").limit(5),
-      supabase.from("leaderboard_players").select("id,player_name,gang_or_faction,score,rank").order("rank").limit(5),
+      supabase.from("advertisements").select("id,title,description,image_url,link,size,popout").eq("is_active", true).order("sort_order").limit(6),
+      supabase.from("leaderboard_factions").select("id,name,type,score,rank,wins,losses,draws,points,played,top_player").order("rank").limit(10),
+      supabase.from("leaderboard_players").select("id,player_name,gang_or_faction,score,rank,wins,losses,played").order("rank").limit(10),
     ]).then(([e, a, d, f, p]) => {
       setEvents((e.data ?? []) as typeof events);
       setAnnouncements((a.data ?? []) as typeof announcements);
@@ -187,27 +187,45 @@ function HomePage() {
 
       {/* Leaderboards */}
       {(factions.length > 0 || players.length > 0) && (
-        <section className="mb-8 grid gap-4 sm:grid-cols-2">
-          <Leaderboard title="Top Gangs / Factions" icon={<Crown className="h-4 w-4 text-accent" />} rows={factions.map((f) => ({ id: f.id, rank: f.rank, name: f.name, sub: f.type, score: f.score }))} />
-          <Leaderboard title="Top Players" icon={<Users className="h-4 w-4 text-accent" />} rows={players.map((p) => ({ id: p.id, rank: p.rank, name: p.player_name, sub: p.gang_or_faction ?? "—", score: p.score }))} />
+        <section className="mb-8 grid gap-4 lg:grid-cols-2">
+          <FactionTable rows={factions} />
+          <PlayerTable rows={players} />
         </section>
       )}
 
-      {/* Ads */}
+      {/* Ads — pop-out (large) and grid */}
       {ads.length > 0 && (
-        <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {ads.map((ad) => {
+        <section className="mb-8 space-y-4">
+          {ads.filter((a) => a.popout || a.size === "xl").map((ad) => {
             const inner = (
-              <div className="group relative h-40 overflow-hidden rounded-2xl glass-strong">
-                {ad.image_url && <img src={ad.image_url} alt={ad.title} className="absolute inset-0 h-full w-full object-cover opacity-50 transition group-hover:opacity-70" />}
-                <div className="relative flex h-full flex-col justify-end p-4">
-                  <div className="font-bold">{ad.title}</div>
-                  {ad.description && <div className="line-clamp-2 text-xs text-muted-foreground">{ad.description}</div>}
+              <div className="group relative h-72 sm:h-96 overflow-hidden rounded-3xl glass-strong">
+                {ad.image_url && <img src={ad.image_url} alt={ad.title} className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:opacity-90 group-hover:scale-105 duration-700" />}
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
+                  <div className="inline-flex w-fit items-center rounded-full glass-gold px-3 py-1 text-[10px] font-bold uppercase text-gold mb-2">Featured</div>
+                  <div className="text-2xl sm:text-4xl font-black brand">{ad.title}</div>
+                  {ad.description && <div className="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground">{ad.description}</div>}
                 </div>
               </div>
             );
             return ad.link ? <a key={ad.id} href={ad.link} target="_blank" rel="noopener noreferrer">{inner}</a> : <div key={ad.id}>{inner}</div>;
           })}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ads.filter((a) => !(a.popout || a.size === "xl")).map((ad) => {
+              const h = ad.size === "large" ? "h-56" : "h-40";
+              const inner = (
+                <div className={`group relative ${h} overflow-hidden rounded-2xl glass-strong`}>
+                  {ad.image_url && <img src={ad.image_url} alt={ad.title} className="absolute inset-0 h-full w-full object-cover opacity-60 transition group-hover:opacity-80" />}
+                  <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+                  <div className="relative flex h-full flex-col justify-end p-4">
+                    <div className="font-bold text-lg">{ad.title}</div>
+                    {ad.description && <div className="line-clamp-2 text-xs text-muted-foreground">{ad.description}</div>}
+                  </div>
+                </div>
+              );
+              return ad.link ? <a key={ad.id} href={ad.link} target="_blank" rel="noopener noreferrer">{inner}</a> : <div key={ad.id}>{inner}</div>;
+            })}
+          </div>
         </section>
       )}
 
@@ -307,25 +325,57 @@ function OddBox({ match_id, match_label, market, selection, value }: { match_id:
   );
 }
 
-function Leaderboard({ title, icon, rows }: { title: string; icon: React.ReactNode; rows: Array<{ id: string; rank: number; name: string; sub: string; score: number }> }) {
+function rankMedal(r: number) { return r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : `#${r}`; }
+
+function FactionTable({ rows }: { rows: Array<{ id: string; rank: number; name: string; type: string; top_player: string | null; wins: number; losses: number; draws: number; points: number; played: number }> }) {
   return (
-    <div className="glass-strong rounded-2xl p-4">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">{icon} {title}</h3>
-      {rows.length === 0 ? (
-        <p className="py-4 text-center text-xs text-muted-foreground">No rankings yet.</p>
-      ) : (
-        <ol className="space-y-1.5">
-          {rows.map((r) => (
-            <li key={r.id} className="flex items-center gap-3 rounded-lg glass px-3 py-2">
-              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${r.rank === 1 ? "bg-gold-gradient text-accent-foreground" : r.rank <= 3 ? "bg-accent/20 text-accent" : "bg-white/5 text-muted-foreground"}`}>{r.rank}</span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-bold">{r.name}</div>
-                <div className="truncate text-xs text-muted-foreground">{r.sub}</div>
-              </div>
-              <div className="font-mono text-sm font-bold tabular-nums text-gold">{Number(r.score).toLocaleString()}</div>
-            </li>
-          ))}
-        </ol>
+    <div className="glass-strong rounded-2xl p-4 overflow-x-auto">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground"><Crown className="h-4 w-4 text-accent" /> Top Gangs / Factions</h3>
+      {rows.length === 0 ? <p className="py-4 text-center text-xs text-muted-foreground">No rankings yet.</p> : (
+        <table className="w-full text-xs">
+          <thead className="text-muted-foreground"><tr className="text-left">
+            <th className="py-1.5 pr-2">#</th><th className="pr-2">Gang/Faction</th><th className="pr-2">Top Player</th>
+            <th className="text-center px-1">W</th><th className="text-center px-1">L</th><th className="text-center px-1">D</th>
+            <th className="text-center px-1">P</th><th className="text-center px-1 text-gold">PTS</th>
+          </tr></thead>
+          <tbody>{rows.map((r) => (
+            <tr key={r.id} className="border-t border-white/5">
+              <td className="py-2 pr-2 text-base">{rankMedal(r.rank)}</td>
+              <td className="pr-2"><div className="font-bold">{r.name}</div><div className="text-[10px] text-muted-foreground capitalize">{r.type}</div></td>
+              <td className="pr-2 text-muted-foreground">{r.top_player ?? "—"}</td>
+              <td className="text-center font-mono text-success">{r.wins}</td>
+              <td className="text-center font-mono text-primary">{r.losses}</td>
+              <td className="text-center font-mono">{r.draws}</td>
+              <td className="text-center font-mono">{r.played}</td>
+              <td className="text-center font-mono font-black text-gold">{r.points}</td>
+            </tr>))}</tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function PlayerTable({ rows }: { rows: Array<{ id: string; rank: number; player_name: string; gang_or_faction: string | null; wins: number; losses: number; played: number; score: number }> }) {
+  return (
+    <div className="glass-strong rounded-2xl p-4 overflow-x-auto">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground"><Users className="h-4 w-4 text-accent" /> Top Shooters</h3>
+      {rows.length === 0 ? <p className="py-4 text-center text-xs text-muted-foreground">No rankings yet.</p> : (
+        <table className="w-full text-xs">
+          <thead className="text-muted-foreground"><tr className="text-left">
+            <th className="py-1.5 pr-2">#</th><th className="pr-2">Player</th>
+            <th className="text-center px-1">Won</th><th className="text-center px-1">Lost</th>
+            <th className="text-center px-1">Total</th><th className="text-center px-1 text-gold">PTS</th>
+          </tr></thead>
+          <tbody>{rows.map((r) => (
+            <tr key={r.id} className="border-t border-white/5">
+              <td className="py-2 pr-2 text-base">{rankMedal(r.rank)}</td>
+              <td className="pr-2"><div className="font-bold">{r.player_name}</div><div className="text-[10px] text-muted-foreground">{r.gang_or_faction ?? "—"}</div></td>
+              <td className="text-center font-mono text-success">{r.wins}</td>
+              <td className="text-center font-mono text-primary">{r.losses}</td>
+              <td className="text-center font-mono">{r.played}</td>
+              <td className="text-center font-mono font-black text-gold">{Number(r.score).toLocaleString()}</td>
+            </tr>))}</tbody>
+        </table>
       )}
     </div>
   );

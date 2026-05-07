@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock, BarChart3, Megaphone, Settings as SettingsIcon } from "lucide-react";
+import { Shield, Coins, Users, Layers, Trophy, Calculator, ScrollText, Check, X, Ticket, Ban, MicOff, Lock, BarChart3, Megaphone, Settings as SettingsIcon, Wallet } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,7 @@ function AdminPage() {
       <Tabs defaultValue="tokens">
         <TabsList className="glass mb-4 flex w-full flex-wrap gap-1 bg-transparent">
           <Tab value="tokens" icon={<Coins className="h-4 w-4" />}>Tokens</Tab>
+          <Tab value="withdrawals" icon={<Wallet className="h-4 w-4" />}>Withdrawals</Tab>
           <Tab value="users" icon={<Users className="h-4 w-4" />}>Users</Tab>
           <Tab value="promos" icon={<Ticket className="h-4 w-4" />}>Promo Codes</Tab>
           <Tab value="roles" icon={<Users className="h-4 w-4" />}>Roles</Tab>
@@ -54,6 +55,7 @@ function AdminPage() {
           <Tab value="audit" icon={<ScrollText className="h-4 w-4" />}>Audit</Tab>
         </TabsList>
         <TabsContent value="tokens"><TokenRequestsAdmin /></TabsContent>
+        <TabsContent value="withdrawals"><WithdrawalsAdmin /></TabsContent>
         <TabsContent value="users"><UsersAdmin /></TabsContent>
         <TabsContent value="promos"><PromoCodesAdmin /></TabsContent>
         <TabsContent value="roles"><RolesAdmin /></TabsContent>
@@ -74,6 +76,76 @@ function Tab({ value, icon, children }: { value: string; icon: React.ReactNode; 
     <TabsTrigger value={value} className="gap-1.5 data-[state=active]:bg-gold-gradient data-[state=active]:text-accent-foreground data-[state=active]:font-bold">
       {icon}{children}
     </TabsTrigger>
+  );
+}
+
+// ---- Withdrawal Requests ----
+interface WithdrawalRow {
+  id: string; user_id: string; ingame_name: string; gang_name: string; amount: number;
+  ticket_id: string | null; status: string; admin_note: string | null; created_at: string; reviewed_at: string | null;
+}
+function WithdrawalsAdmin() {
+  const [rows, setRows] = useState<WithdrawalRow[]>([]);
+  const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const load = async () => {
+    let q = supabase.from("withdrawal_requests").select("*").order("created_at", { ascending: false });
+    if (filter === "pending") q = q.eq("status", "pending");
+    const { data } = await q;
+    setRows((data ?? []) as WithdrawalRow[]);
+  };
+  useEffect(() => { load(); }, [filter]);
+
+  const approve = async (r: WithdrawalRow) => {
+    const note = await promptDialog({ title: "Approve withdrawal", description: `Send instructions to ${r.ingame_name} (optional message).`, placeholder: "How/when to receive…" });
+    if (note === null) return;
+    const { error } = await supabase.rpc("approve_withdrawal", { _req_id: r.id, _note: note || undefined });
+    if (error) return toast.error(error.message);
+    toast.success("Approved"); load();
+  };
+  const decline = async (r: WithdrawalRow) => {
+    const reason = await promptDialog({ title: "Decline withdrawal", description: `Refund ${formatTokens(r.amount)} to ${r.ingame_name}. Reason required.`, placeholder: "Reason…" });
+    if (!reason) return;
+    const { error } = await supabase.rpc("decline_withdrawal", { _req_id: r.id, _note: reason });
+    if (error) return toast.error(error.message);
+    toast.success("Declined and refunded"); load();
+  };
+
+  return (
+    <div className="glass-strong rounded-xl p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-bold flex items-center gap-2"><Wallet className="h-4 w-4 text-accent" /> Withdrawal Requests</h2>
+        <div className="flex gap-1">
+          {(["pending","all"] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)} className={`rounded px-3 py-1 text-xs font-bold uppercase ${filter===f?"bg-gold-gradient text-accent-foreground":"glass text-muted-foreground"}`}>{f}</button>
+          ))}
+        </div>
+      </div>
+      {rows.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No requests.</p> : (
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <div key={r.id} className="rounded-lg bg-secondary/40 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm">
+                  <div className="font-bold">{r.ingame_name} <span className="text-muted-foreground font-normal">· {r.gang_name}</span></div>
+                  <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()} {r.ticket_id && <>· Ticket: <span className="font-mono">{r.ticket_id}</span></>}</div>
+                </div>
+                <div className="font-mono text-lg font-black text-gold tabular-nums">{formatTokens(r.amount)}</div>
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${r.status==="pending"?"bg-warning/20 text-warning":r.status==="approved"?"bg-success/20 text-success":"bg-primary/20 text-primary"}`}>{r.status}</span>
+                {r.status === "pending" && (
+                  <div className="flex gap-1">
+                    <Button size="sm" onClick={() => approve(r)} className="h-7 bg-success text-background hover:bg-success/90"><Check className="h-3 w-3" /></Button>
+                    <Button size="sm" variant="destructive" onClick={() => decline(r)} className="h-7"><X className="h-3 w-3" /></Button>
+                  </div>
+                )}
+                {r.admin_note && <div className="text-xs text-muted-foreground italic">"{r.admin_note}"</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
