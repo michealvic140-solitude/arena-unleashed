@@ -891,6 +891,7 @@ export type Database = {
           max_payout: number
           max_stake: number
           min_stake: number
+          notification_triggers: Json
           updated_at: string
           why_trust_us: string | null
         }
@@ -906,6 +907,7 @@ export type Database = {
           max_payout?: number
           max_stake?: number
           min_stake?: number
+          notification_triggers?: Json
           updated_at?: string
           why_trust_us?: string | null
         }
@@ -921,6 +923,7 @@ export type Database = {
           max_payout?: number
           max_stake?: number
           min_stake?: number
+          notification_triggers?: Json
           updated_at?: string
           why_trust_us?: string | null
         }
@@ -1053,6 +1056,7 @@ export type Database = {
           id: string
           is_active: boolean
           max_uses: number
+          max_uses_per_user: number
           note: string | null
           uses: number
         }
@@ -1065,6 +1069,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
+          max_uses_per_user?: number
           note?: string | null
           uses?: number
         }
@@ -1077,6 +1082,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number
+          max_uses_per_user?: number
           note?: string | null
           uses?: number
         }
@@ -1380,6 +1386,7 @@ export type Database = {
         Args: { _ban: boolean; _reason?: string; _user_id: string }
         Returns: undefined
       }
+      admin_clear_all_tokens: { Args: { _reason: string }; Returns: undefined }
       admin_grant_tokens: {
         Args: { _amount: number; _note?: string; _user_id: string }
         Returns: undefined
@@ -1434,6 +1441,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      insert_notification_all: {
+        Args: { _body?: string; _link?: string; _title: string }
+        Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_mod_or_admin: { Args: { _user_id: string }; Returns: boolean }
