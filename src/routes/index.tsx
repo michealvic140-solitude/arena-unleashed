@@ -37,7 +37,7 @@ function HomePage() {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; countdown_to: string | null }>>([]);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string | null; description: string | null; link: string | null }>>([]);
-  const [ads, setAds] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; link: string | null }>>([]);
+  const [ads, setAds] = useState<Array<{ id: string; title: string; description: string | null; image_url: string | null; link: string | null; size: string; popout: boolean }>>([]);
   const [annIdx, setAnnIdx] = useState(0);
   const [factions, setFactions] = useState<Array<{ id: string; name: string; type: string; score: number; rank: number; wins: number; losses: number; draws: number; points: number; played: number; top_player: string | null }>>([]);
   const [players, setPlayers] = useState<Array<{ id: string; player_name: string; gang_or_faction: string | null; score: number; rank: number; wins: number; losses: number; played: number }>>([]);
@@ -46,7 +46,7 @@ function HomePage() {
     Promise.all([
       supabase.from("events").select("id,title,description,image_url,countdown_to").eq("is_active", true).order("sort_order").limit(8),
       supabase.from("announcements").select("id,title,description,link").eq("is_active", true).order("sort_order").limit(10),
-      supabase.from("advertisements").select("id,title,description,image_url,link").eq("is_active", true).order("sort_order").limit(6),
+      supabase.from("advertisements").select("id,title,description,image_url,link,size,popout").eq("is_active", true).order("sort_order").limit(6),
       supabase.from("leaderboard_factions").select("id,name,type,score,rank,wins,losses,draws,points,played,top_player").order("rank").limit(10),
       supabase.from("leaderboard_players").select("id,player_name,gang_or_faction,score,rank,wins,losses,played").order("rank").limit(10),
     ]).then(([e, a, d, f, p]) => {
@@ -193,21 +193,39 @@ function HomePage() {
         </section>
       )}
 
-      {/* Ads */}
+      {/* Ads — pop-out (large) and grid */}
       {ads.length > 0 && (
-        <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {ads.map((ad) => {
+        <section className="mb-8 space-y-4">
+          {ads.filter((a) => a.popout || a.size === "xl").map((ad) => {
             const inner = (
-              <div className="group relative h-40 overflow-hidden rounded-2xl glass-strong">
-                {ad.image_url && <img src={ad.image_url} alt={ad.title} className="absolute inset-0 h-full w-full object-cover opacity-50 transition group-hover:opacity-70" />}
-                <div className="relative flex h-full flex-col justify-end p-4">
-                  <div className="font-bold">{ad.title}</div>
-                  {ad.description && <div className="line-clamp-2 text-xs text-muted-foreground">{ad.description}</div>}
+              <div className="group relative h-72 sm:h-96 overflow-hidden rounded-3xl glass-strong">
+                {ad.image_url && <img src={ad.image_url} alt={ad.title} className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:opacity-90 group-hover:scale-105 duration-700" />}
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                <div className="relative flex h-full flex-col justify-end p-6 sm:p-10">
+                  <div className="inline-flex w-fit items-center rounded-full glass-gold px-3 py-1 text-[10px] font-bold uppercase text-gold mb-2">Featured</div>
+                  <div className="text-2xl sm:text-4xl font-black brand">{ad.title}</div>
+                  {ad.description && <div className="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground">{ad.description}</div>}
                 </div>
               </div>
             );
             return ad.link ? <a key={ad.id} href={ad.link} target="_blank" rel="noopener noreferrer">{inner}</a> : <div key={ad.id}>{inner}</div>;
           })}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ads.filter((a) => !(a.popout || a.size === "xl")).map((ad) => {
+              const h = ad.size === "large" ? "h-56" : "h-40";
+              const inner = (
+                <div className={`group relative ${h} overflow-hidden rounded-2xl glass-strong`}>
+                  {ad.image_url && <img src={ad.image_url} alt={ad.title} className="absolute inset-0 h-full w-full object-cover opacity-60 transition group-hover:opacity-80" />}
+                  <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+                  <div className="relative flex h-full flex-col justify-end p-4">
+                    <div className="font-bold text-lg">{ad.title}</div>
+                    {ad.description && <div className="line-clamp-2 text-xs text-muted-foreground">{ad.description}</div>}
+                  </div>
+                </div>
+              );
+              return ad.link ? <a key={ad.id} href={ad.link} target="_blank" rel="noopener noreferrer">{inner}</a> : <div key={ad.id}>{inner}</div>;
+            })}
+          </div>
         </section>
       )}
 
