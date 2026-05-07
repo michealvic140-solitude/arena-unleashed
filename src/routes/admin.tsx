@@ -96,14 +96,14 @@ function WithdrawalsAdmin() {
   useEffect(() => { load(); }, [filter]);
 
   const approve = async (r: WithdrawalRow) => {
-    const note = await promptDialog({ title: "Approve withdrawal", description: `Send instructions to ${r.ingame_name} (optional message).`, placeholder: "How/when to receive…", required: false });
+    const note = await promptDialog({ title: "Approve withdrawal", description: `Send instructions to ${r.ingame_name} (optional message).`, placeholder: "How/when to receive…" });
     if (note === null) return;
     const { error } = await supabase.rpc("approve_withdrawal", { _req_id: r.id, _note: note || undefined });
     if (error) return toast.error(error.message);
     toast.success("Approved"); load();
   };
   const decline = async (r: WithdrawalRow) => {
-    const reason = await promptDialog({ title: "Decline withdrawal", description: `Refund ${formatTokens(r.amount)} to ${r.ingame_name}. Reason required.`, placeholder: "Reason…", required: true });
+    const reason = await promptDialog({ title: "Decline withdrawal", description: `Refund ${formatTokens(r.amount)} to ${r.ingame_name}. Reason required.`, placeholder: "Reason…" });
     if (!reason) return;
     const { error } = await supabase.rpc("decline_withdrawal", { _req_id: r.id, _note: reason });
     if (error) return toast.error(error.message);
