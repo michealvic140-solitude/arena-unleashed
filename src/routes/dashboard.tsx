@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Coins, ListChecks, Receipt, TicketCheck, Pencil, ArrowDownToLine } from "lucide-react";
+import { Coins, ListChecks, Receipt, TicketCheck, Pencil, ArrowDownToLine, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -8,7 +8,7 @@ import { formatTokens } from "@/lib/format";
 import { RoleBadge } from "@/components/RoleBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — LOMITA SHOOTERS LEAGUE" }] }),
@@ -127,6 +127,63 @@ function DashboardPage() {
 
       {editing && <EditBetDialog bet={editing} sels={selections.filter((s) => s.bet_id === editing.id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); refreshProfile(); }} />}
       {cashing && <CashoutDialog bet={cashing} onClose={() => setCashing(null)} onDone={() => { setCashing(null); load(); refreshProfile(); }} />}
+      <WithdrawCard onDone={() => { load(); refreshProfile(); }} />
+    </div>
+  );
+}
+
+function WithdrawCard({ onDone }: { onDone: () => void }) {
+  const { profile } = useAuth();
+  const [ingame, setIngame] = useState(profile?.full_name ?? "");
+  const [gang, setGang] = useState(profile?.gang_faction ?? "");
+  const [amount, setAmount] = useState("");
+  const [ticket, setTicket] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const submit = async () => {
+    const amt = parseFloat(amount);
+    if (!ingame.trim() || !gang.trim()) { toast.error("In-game name and gang required"); return; }
+    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    if (amt > Number(profile?.token_balance ?? 0)) { toast.error("Amount exceeds your balance"); return; }
+    setBusy(true);
+    const { error } = await supabase.rpc("submit_withdrawal", {
+      _ingame: ingame.trim(), _gang: gang.trim(), _amount: amt, _ticket: ticket.trim() || null,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setSuccess(true);
+    setAmount(""); setTicket("");
+    onDone();
+  };
+
+  return (
+    <div className="mt-4 glass-strong rounded-xl p-4">
+      <h2 className="mb-3 flex items-center gap-2 font-bold"><Wallet className="h-4 w-4 text-accent" /> Withdraw Tokens</h2>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Input placeholder="In-game Name *" value={ingame} onChange={(e) => setIngame(e.target.value)} />
+        <Input placeholder="In-game Gang Name *" value={gang} onChange={(e) => setGang(e.target.value)} />
+        <Input type="number" placeholder="Withdrawal Amount *" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Input placeholder="Bet Ticket / Tracking ID (optional)" value={ticket} onChange={(e) => setTicket(e.target.value)} />
+      </div>
+      <Button onClick={submit} disabled={busy} className="mt-3 bg-gold-gradient text-accent-foreground hover:opacity-90 font-bold">
+        {busy ? "Submitting…" : "Submit Withdrawal Request"}
+      </Button>
+      <Dialog open={success} onOpenChange={setSuccess}>
+        <DialogContent className="glass-strong">
+          <DialogHeader>
+            <DialogTitle className="text-gold">Withdrawal request submitted</DialogTitle>
+            <DialogDescription className="pt-2 leading-relaxed">
+              Your withdrawal request has been sent and you'll receive it on or before 24hrs after the admin approves it.
+              Approval withdrawal requests are carefully tracked by our support team to avoid inconvenience.
+              Stay tuned for notifications from the admin on how to cash out your withdrawal after it's been approved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setSuccess(false)} className="bg-gold-gradient text-accent-foreground hover:opacity-90">Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
