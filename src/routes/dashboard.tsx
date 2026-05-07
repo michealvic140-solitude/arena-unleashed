@@ -148,7 +148,7 @@ function WithdrawCard({ onDone }: { onDone: () => void }) {
     if (amt > Number(profile?.token_balance ?? 0)) { toast.error("Amount exceeds your balance"); return; }
     setBusy(true);
     const { error } = await supabase.rpc("submit_withdrawal", {
-      _ingame: ingame.trim(), _gang: gang.trim(), _amount: amt, _ticket: ticket.trim() || null,
+      _ingame: ingame.trim(), _gang: gang.trim(), _amount: amt, _ticket: ticket.trim() || undefined,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
